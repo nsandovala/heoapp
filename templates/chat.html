@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con HEO – AMON 360</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            font-family: 'Inter', sans-serif;
+            color: white;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .message {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+        .user {
+            text-align: right;
+            color: #4ade80; /* Verde usuario */
+            font-weight: bold;
+        }
+        .heo {
+            text-align: left;
+            color: #60a5fa; /* Azul HEO */
+        }
+
+        /* Animación de aparición */
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* BOTONES DIFERENCIADOS */
+        a.btn-urgencias, a.btn-medico, a.btn-leve {
+            display: block;
+            margin: 14px auto 4px;
+            padding: 14px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            color: #fff;
+            border-radius: 10px;
+            width: 85%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        a.btn-urgencias { background: #d32f2f; box-shadow: 0 4px 12px rgba(211,47,47,0.5); }
+        a.btn-urgencias:hover { background: #b71c1c; transform: scale(1.05); }
+
+        a.btn-medico { background: #1976d2; box-shadow: 0 4px 12px rgba(25,118,210,0.5); }
+        a.btn-medico:hover { background: #1565c0; transform: scale(1.05); }
+
+        a.btn-leve { background: #388e3c; box-shadow: 0 4px 12px rgba(56,142,60,0.5); }
+        a.btn-leve:hover { background: #2e7d32; transform: scale(1.05); }
+
+        /* INPUT STYLING */
+        input[type="text"] {
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px 0 0 10px;
+            border: none;
+            background: #fff;
+            color: #000;
+            font-size: 16px;
+            outline: none;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            padding: 14px 20px;
+            font-weight: bold;
+            border-radius: 0 10px 10px 0;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
+    <div class="w-full max-w-lg glass p-6 shadow-lg">
+        <h1 class="text-3xl font-bold mb-2 text-center">💬 Chat con HEO</h1>
+        <p class="text-center text-sm opacity-80 mb-4">Asistente de Bienestar Integral</p>
+
+        <!-- Caja de chat -->
+        <div id="chat-box" class="h-96 overflow-y-auto p-3 bg-white bg-opacity-10 rounded-md">
+            <div class="heo message fade-in">👋 ¡Hola! Soy HEO, tu asistente de bienestar.<br>¿Cómo puedo ayudarte hoy?</div>
+        </div>
+
+        <!-- Input -->
+        <div class="mt-4 flex">
+            <input id="user-input" type="text" placeholder="Escribe tu mensaje..." />
+            <button id="send-btn">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        const sendBtn = document.getElementById('send-btn');
+        const userInput = document.getElementById('user-input');
+        const chatBox = document.getElementById('chat-box');
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Mostrar mensaje usuario
+            chatBox.innerHTML += `<div class="user message fade-in"><strong>Tú:</strong> ${message}</div>`;
+            userInput.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (data.reply) {
+                    chatBox.innerHTML += `<div class="heo message fade-in"><strong>HEO:</strong> ${data.reply}</div>`;
+                } else {
+                    chatBox.innerHTML += `<div class="heo message text-red-400 fade-in">⚠ Error: ${data.error}</div>`;
+                }
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+            } catch (error) {
+                chatBox.innerHTML += `<div class="heo message text-red-400 fade-in">⚠ Error al conectar con el servidor.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

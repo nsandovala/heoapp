@@ -1,0 +1,37 @@
+[
+  {
+    "nombre": "Farmacia Cruz Verde",
+    "direccion": "Av. Pedro Montt 2112, Valparaíso",
+    "lat": -33.0456,
+    "lng": -71.6203,
+    "telefono": "+56322135400"
+  },
+  {
+    "nombre": "Farmacia Ahumada",
+    "direccion": "Av. Pedro Montt 2140, Valparaíso",
+    "lat": -33.0454,
+    "lng": -71.6198,
+    "telefono": "+56322137300"
+  },
+  {
+    "nombre": "Salcobrand",
+    "direccion": "Av. Brasil 1485, Valparaíso",
+    "lat": -33.0423,
+    "lng": -71.6251,
+    "telefono": "+56322220500"
+  },
+  {
+    "nombre": "Farmacia Doctor Simi",
+    "direccion": "Av. Playa Ancha 2050, Valparaíso",
+    "lat": -33.0379,
+    "lng": -71.6392,
+    "telefono": "+56322246800"
+  },
+  {
+    "nombre": "Farmacia Independiente Valparaíso",
+    "direccion": "Calle Independencia 220, Valparaíso",
+    "lat": -33.0438,
+    "lng": -71.6215,
+    "telefono": "+56322189999"
+  }
+]
