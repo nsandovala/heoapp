@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import os
 import requests
@@ -50,7 +50,6 @@ def api_chat():
     else:
         system_prompt = "Eres HEO, un asistente empático y experto en bienestar general."
 
-    # Payload para OpenRouter
     payload = {
         "model": MODEL,
         "messages": [
@@ -69,12 +68,10 @@ def api_chat():
             "[URGENCIAS_LINK]",
             '<br><a href="https://maps.google.com?q=urgencias+cercanas" class="btn-urgencias" target="_blank">🚨 Ubicar Urgencias Cercanas</a>'
         )
-
         heo_reply = heo_reply.replace(
             "[MEDICO_LINK]",
             '<br><a href="https://medicos.generales.cl" class="btn-medico" target="_blank">👨‍⚕️ Consultar Médico General</a>'
         )
-
         heo_reply = heo_reply.replace(
             "[CONSEJO_NATURAL]",
             '<br><a href="#consejo" class="btn-leve">🌱 Ver Consejos Naturales</a>'
@@ -84,10 +81,15 @@ def api_chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ✅ Rutas para PWA (si decides implementarlo)
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory('.', 'manifest.json')
+
+@app.route('/service-worker.js')
+def service_worker():
+    return send_from_directory('.', 'service-worker.js')
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=True)
