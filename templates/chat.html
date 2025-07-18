@@ -6,6 +6,35 @@
     <title>Chat con HEO – AMON 360</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        <style>
+/* ... Tu CSS actual ... */
+
+/* === BOTÓN ENVIAR VISUAL MEJORADO === */
+button#send-btn {
+    background: #4f46e5; /* Indigo intenso */
+    color: #fff;
+    font-weight: bold;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+button#send-btn:hover {
+    background: #6366f1; /* Indigo más claro */
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(99, 102, 241, 0.6);
+}
+
+button#send-btn:active {
+    background: #4338ca; /* Más oscuro al presionar */
+    transform: scale(0.97);
+}
+
+
         body {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             font-family: 'Inter', sans-serif;
