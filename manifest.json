@@ -1,8 +1,9 @@
 {
-  "name": "HEO – Asistente Bienestar",
+  "name": "HEO Asistente Bienestar",
   "short_name": "HEO",
-  "description": "Asistente de Bienestar Integral AMON 360",
+  "description": "HEO - Tu asistente integral de bienestar con IA",
   "start_url": "/chat",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#4f46e5",
