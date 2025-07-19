@@ -1,8 +1,10 @@
-# -*- coding: utf-8 -*-
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import os
 import requests
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
 
 # Cargar variables de entorno
 load_dotenv()
@@ -19,37 +21,46 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Palabras clave para activar lógica médica
+# ✅ Configuración Google Sheets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+client = gspread.authorize(creds)
+sheet = client.open("HEO_Metricas").sheet1  # Nombre del Google Sheet
+
+# Palabras clave
 TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vomito", "dolor de cabeza"]
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-@app.route("/chat")
-def chat():
-    return render_template("chat.html")
+TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetización", "startup", "empresa"]
 
 @app.route("/api/chat", methods=["POST"])
 def api_chat():
     user_message = request.json.get("message", "").lower()
 
-    # Detectar si es contexto médico
+    # Detectar intención
     is_medical = any(word in user_message for word in TRIGGER_WORDS)
+    is_business = any(word in user_message for word in TRIGGER_BUSINESS)
 
     # Prompt dinámico
     if is_medical:
-        system_prompt = (
-            "Eres HEO, un asistente empático y experto en bienestar. "
-            "Si detectas síntomas, clasifica como LEVE, MEDIO o GRAVE y responde:\n"
-            "1. LEVE → consejo natural + texto exacto: [CONSEJO_NATURAL]\n"
-            "2. MEDIO → recomienda médico general + texto exacto: [MEDICO_LINK]\n"
-            "3. GRAVE → recomienda urgencias + texto exacto: [URGENCIAS_LINK]\n"
-            "Sé breve, humano y muy claro."
-        )
+        system_prompt = """
+        Eres HEO, un asistente empático experto en bienestar.
+        Si detectas síntomas, clasifica como LEVE, MEDIO o GRAVE y responde:
+        [CONSEJO_NATURAL], [MEDICO_LINK], [URGENCIAS_LINK].
+        Sé breve, humano y muy claro.
+        """
+    elif is_business:
+        system_prompt = """
+        Eres HEO, un asistente estratégico que aplica el Método Códex Learning Loop™.
+        Objetivo: Genera ideas de negocio creativas y accionables.
+        Formato:
+        ✅ IDEA: breve y diferenciada
+        💡 ¿Por qué funciona?: razón lógica
+        🚀 Primeros pasos: 3 acciones claras
+        📊 Escalabilidad: cómo crecer rápido y barato
+        """
     else:
-        system_prompt = "Eres HEO, un asistente empático y experto en bienestar general."
+        system_prompt = "Eres HEO, asistente empático experto en bienestar general y creatividad."
 
+    # Llamada a OpenRouter
     payload = {
         "model": MODEL,
         "messages": [
@@ -63,7 +74,7 @@ def api_chat():
         response_data = response.json()
         heo_reply = response_data["choices"][0]["message"]["content"]
 
-        # Reemplazar enlaces por botones estilizados
+        # Reemplazar enlaces por botones
         heo_reply = heo_reply.replace(
             "[URGENCIAS_LINK]",
             '<br><a href="https://maps.google.com?q=urgencias+cercanas" class="btn-urgencias" target="_blank">🚨 Ubicar Urgencias Cercanas</a>'
@@ -77,9 +88,14 @@ def api_chat():
             '<br><a href="#consejo" class="btn-leve">🌱 Ver Consejos Naturales</a>'
         )
 
+        # ✅ Guardar en Google Sheets
+        tipo = "Negocio" if is_business else "Bienestar" if is_medical else "General"
+        sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), user_message, tipo, heo_reply])
+
         return jsonify({"reply": heo_reply})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ✅ Rutas para PWA (si decides implementarlo)
 @app.route('/manifest.json')
