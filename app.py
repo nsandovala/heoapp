@@ -135,11 +135,11 @@ def chat():
 
 @app.route('/manifest.json')
 def manifest():
-    return send_from_directory('.', 'manifest.json')
+    return send_from_directory('static', 'manifest.json')
 
 @app.route('/service-worker.js')
 def service_worker():
-    return send_from_directory('.', 'service-worker.js')
+    return send_from_directory('static', 'service-worker.js')
 
 # ================================
 # 7. INICIAR SERVIDOR
