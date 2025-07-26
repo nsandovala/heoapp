@@ -85,7 +85,7 @@ def api_chat():
         🚀 Primeros pasos: 3 acciones claras
         📊 Escalabilidad: cómo crecer rápido y barato
         """
-  elif is_legal:
+     elif is_legal:
         system_prompt = """
         Eres HEO, un asistente legal preventivo.
         Ayuda al usuario a entender sus derechos, contratos o pasos legales básicos.
