@@ -48,10 +48,11 @@ client = gspread.authorize(creds)
 sheet = client.open("HEO_Metricas").sheet1  # Nombre exacto del Google Sheet
 
 # ================================
-# 4.1. PALABRAS CLAVE PARA OTRAS INTENCIONES
+# 4. PALABRAS CLAVE PARA INTENCIÓN
 # ================================
-TRIGGER_LEGAL = ["demanda", "contrato", "abogado", "juicio", "legal", "derecho"]
-TRIGGER_CREATIVA = ["eslogan", "nombre", "marca", "cuento", "historia", "dibujo", "idea creativa"]
+TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vómito", "dolor de cabeza"]
+TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetización", "startup", "empresa"]
+
 
 # ================================
 # 5. RUTA PRINCIPAL PARA CHAT API
@@ -136,7 +137,10 @@ def api_chat():
 
         # Guardar en Google Sheets
         sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), user_message, tipo, heo_reply])
-
+        print("🧾 Prompt:", system_prompt)
+        print("💬 Usuario:", user_message)
+        print("📤 Enviado a modelo:", payload)
+ 
         return jsonify({"reply": heo_reply})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
