@@ -48,10 +48,10 @@ client = gspread.authorize(creds)
 sheet = client.open("HEO_Metricas").sheet1  # Nombre exacto del Google Sheet
 
 # ================================
-# 4. PALABRAS CLAVE PARA INTENCIÓN
+# 4.1. PALABRAS CLAVE PARA OTRAS INTENCIONES
 # ================================
-TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vomito", "dolor de cabeza"]
-TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetización", "startup", "empresa"]
+TRIGGER_LEGAL = ["demanda", "contrato", "abogado", "juicio", "legal", "derecho"]
+TRIGGER_CREATIVA = ["eslogan", "nombre", "marca", "cuento", "historia", "dibujo", "idea creativa"]
 
 # ================================
 # 5. RUTA PRINCIPAL PARA CHAT API
@@ -60,12 +60,15 @@ TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetización", "start
 def api_chat():
     user_message = request.json.get("message", "").lower()
 
-    # Detectar intención (bienestar o negocio)
+    # Detectar intención
     is_medical = any(word in user_message for word in TRIGGER_WORDS)
     is_business = any(word in user_message for word in TRIGGER_BUSINESS)
+    is_legal = any(word in user_message for word in TRIGGER_LEGAL)
+    is_creative = any(word in user_message for word in TRIGGER_CREATIVA)
 
-    # Prompt dinámico
+    # Prompt dinámico por categoría
     if is_medical:
+        tipo = "Bienestar"
         system_prompt = """
         Eres HEO, un asistente empático experto en bienestar.
         Si detectas síntomas, clasifica como LEVE, MEDIO o GRAVE y responde:
@@ -73,6 +76,7 @@ def api_chat():
         Sé breve, humano y muy claro.
         """
     elif is_business:
+        tipo = "Negocio"
         system_prompt = """
         Eres HEO, un asistente estratégico que aplica el Método Códex Learning Loop™.
         Objetivo: Genera ideas de negocio creativas y accionables.
@@ -82,8 +86,24 @@ def api_chat():
         🚀 Primeros pasos: 3 acciones claras
         📊 Escalabilidad: cómo crecer rápido y barato
         """
+    elif is_legal:
+        tipo = "Legal"
+        system_prompt = """
+        Eres HEO, un asistente legal preventivo.
+        Ayuda al usuario a entender sus derechos, contratos o pasos legales básicos.
+        No das asesoría jurídica formal, pero sí información orientativa.
+        Responde con claridad, sin ambigüedades, y sugiere buscar un abogado si es grave.
+        """
+    elif is_creative:
+        tipo = "Creativo"
+        system_prompt = """
+        Eres HEO, un asistente creativo y artístico.
+        Ayuda a generar eslóganes, nombres, cuentos cortos, ideas de personajes o campañas visuales.
+        Usa lenguaje visual, creativo y emocional. Siempre sorprende.
+        """
     else:
-        system_prompt = "Eres HEO, asistente empático experto en bienestar general y creatividad."
+        tipo = "General"
+        system_prompt = "Eres HEO, un asistente empático experto en bienestar general y creatividad."
 
     # Payload para OpenRouter
     payload = {
@@ -114,13 +134,13 @@ def api_chat():
             '<br><a href="#consejo" class="btn-leve">🌱 Ver Consejos Naturales</a>'
         )
 
-        # Guardar métrica en Google Sheets
-        tipo = "Negocio" if is_business else "Bienestar" if is_medical else "General"
+        # Guardar en Google Sheets
         sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), user_message, tipo, heo_reply])
 
         return jsonify({"reply": heo_reply})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ================================
 # 6. RUTAS PARA PWA
