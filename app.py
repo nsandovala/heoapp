@@ -52,7 +52,8 @@ sheet = client.open("HEO_Metricas").sheet1  # Nombre exacto del Google Sheet
 # ================================
 TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vomito", "dolor de cabeza"]
 TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetización", "startup", "empresa", "modelo de negocio"]
-
+TRIGGER_LEGAL = ["demanda", "contrato", "abogado", "juicio", "legal", "derecho"]
+TRIGGER_CREATIVA = ["eslogan", "nombre", "marca", "cuento", "historia", "dibujo", "idea creativa"]
 # ================================
 # 5. RUTA PRINCIPAL PARA CHAT API
 # ================================
@@ -63,6 +64,8 @@ def api_chat():
     # Detectar intención (bienestar o negocio)
     is_medical = any(word in user_message for word in TRIGGER_WORDS)
     is_business = any(word in user_message for word in TRIGGER_BUSINESS)
+    is_legal = any(word in user_message for word in TRIGGER_LEGAL)
+    is_creative = any(word in user_message for word in TRIGGER_CREATIVA)
 
     # Prompt dinámico
     if is_medical:
@@ -82,8 +85,21 @@ def api_chat():
         🚀 Primeros pasos: 3 acciones claras
         📊 Escalabilidad: cómo crecer rápido y barato
         """
+  elif is_legal:
+        system_prompt = """
+        Eres HEO, un asistente legal preventivo.
+        Ayuda al usuario a entender sus derechos, contratos o pasos legales básicos.
+        No das asesoría jurídica formal, pero sí información orientativa.
+        Responde con claridad, sin ambigüedades, y sugiere buscar un abogado si es grave.
+        """
+    elif is_creative:
+        system_prompt = """
+        Eres HEO, un asistente creativo y artístico.
+        Ayuda a generar eslóganes, nombres, cuentos cortos, ideas de personajes o campañas visuales.
+        Usa lenguaje visual, creativo y emocional. Siempre sorprende.
+        """
     else:
-        system_prompt = "Eres HEO, asistente empático experto en bienestar general y creatividady ayuda comunitaria. Responde de forma clara, empática y útil."
+        system_prompt = "Eres HEO, un asistente empático experto en bienestar general y creatividad."
 
     # Payload para OpenRouter
     payload = {
