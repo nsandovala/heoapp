@@ -50,10 +50,11 @@ sheet = client.open("HEO_Metricas").sheet1  # Nombre exacto del Google Sheet
 # ================================
 # 4. PALABRAS CLAVE PARA INTENCIÓN
 # ================================
-TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vómito", "dolor de cabeza"]
-TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetización", "startup", "empresa"]
-
-
+# ================================
+# 4. PALABRAS CLAVE PARA DETECTAR INTENCIÓN
+# ================================
+TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vómito", "gripe", "resfriado", "infección"]
+TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetizar", "empresa", "proyecto", "modelo de negocio"]
 # ================================
 # 5. RUTA PRINCIPAL PARA CHAT API
 # ================================
