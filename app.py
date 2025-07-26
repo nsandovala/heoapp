@@ -1,140 +1,149 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import openai
-import datetime
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from dotenv import load_dotenv
 import os
+import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
+import json
+
+# ================================
+# 1. CARGAR VARIABLES DE ENTORNO
+# ================================
+# Esto lee .env en Render o local (OPENROUTER_API_KEY y GOOGLE_CREDENTIALS)
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
-
-# ================================
-# 1. CONFIGURACIÓN DE GOOGLE SHEETS
-# ================================
-scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name("credenciales.json", scope)
-client = gspread.authorize(creds)
-sheet = client.open("HEO_SENTINEL_LOGS").sheet1
 
 # ================================
 # 2. CONFIGURACIÓN OPENROUTER
 # ================================
-openai.api_key = os.getenv("OPENROUTER_API_KEY")
-openai.api_base = "https://openrouter.ai/api/v1"
+API_KEY = os.getenv("OPENROUTER_API_KEY")
+MODEL = os.getenv("MODEL", "openai/gpt-4o-mini")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# ================================
-# 3. MODELO A UTILIZAR
-# ================================
-model = "mistralai/mixtral-8x7b-instruct"
-
-# ================================
-# 4. PALABRAS CLAVE PARA DETECTAR INTENCIÓN
-# ================================
-TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vómito", "gripe", "resfriado", "infección"]
-TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetizar", "empresa", "proyecto", "modelo de negocio"]
-
-# ================================
-# 5. RESPUESTAS PERSONALIZADAS
-# ================================
-respuestas = {
-    "Bienestar": """
-EVALUACIÓN DE BIENESTAR:
-
-Nivel leve → Recomendación natural (infusiones, reposo, hidratación).
-Nivel medio → Sugerencia de medicina general con receta.
-Nivel grave → Acudir a urgencias. En caso de duda, contacto médico verificado.
-
-🧠 Esta respuesta es informativa. No reemplaza evaluación clínica real.
-""",
-
-    "Legal": """
-Asistencia Legal Inicial:
-
-1. Describe tu caso en una frase.
-2. ¿Qué esperas lograr? (resolver conflicto, redactar documento, etc.)
-3. ¿Urgencia? ¿Plazo límite?
-
-Luego de eso, puedo ayudarte a estructurar tu solicitud con el Método Códex:
-- Claridad del problema
-- Objetivo deseado
-- Estrategia legal preliminar
-
-⚖️ Este sistema no reemplaza asesoría jurídica profesional.
-""",
-
-    "Creativo": """
-Laboratorio Creativo Activado:
-
-🎨 Método Códex Learning Loop:
-1. Define el objetivo creativo
-2. Lanza ideas iniciales
-3. Explora variaciones locas
-4. Refina lo mejor
-5. Prueba con feedback real
-
-¡Estoy listo para co-crear contigo! ¿Por dónde comenzamos?
-""",
-
-    "Negocio": """
-Mentoría Inicial de Negocios:
-
-🧠 Método Códex Aplicado:
-1. Define la idea central en 1 frase
-2. ¿Para quién es? ¿Qué problema resuelve?
-3. ¿Cómo ganarías dinero con ello?
-
-Responde estas 3 preguntas y te ayudo a modelar tu idea paso a paso.
-"""
+HEADERS = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
 }
 
 # ================================
-# 6. RUTA PRINCIPAL DEL CHAT
+# 3. GOOGLE SHEETS - CREDENCIALES
 # ================================
-@app.route('/api/chat', methods=['POST'])
-def chat():
+# Las credenciales se guardan en Render en la variable GOOGLE_CREDENTIALS (JSON)
+# Para local, copia el contenido de credentials.json en esa variable.
+google_creds = os.getenv("GOOGLE_CREDENTIALS")
+
+if not google_creds:
+    raise Exception("❌ Falta la variable GOOGLE_CREDENTIALS en Render")
+
+# Parsear el JSON y crear credenciales
+creds_dict = json.loads(google_creds)
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+client = gspread.authorize(creds)
+
+# Abrir la hoja (asegúrate de compartir el Sheet con el email del servicio)
+sheet = client.open("HEO_Metricas").sheet1  # Nombre exacto del Google Sheet
+
+# ================================
+# 4. PALABRAS CLAVE PARA INTENCIÓN
+# ================================
+TRIGGER_WORDS = ["dolor", "síntoma", "fiebre", "mareo", "cansancio", "tos", "vomito", "dolor de cabeza"]
+TRIGGER_BUSINESS = ["negocio", "idea", "emprendimiento", "monetización", "startup", "empresa", "modelo de negocio"]
+
+# ================================
+# 5. RUTA PRINCIPAL PARA CHAT API
+# ================================
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    user_message = request.json.get("message", "").lower()
+
+    # Detectar intención (bienestar o negocio)
+    is_medical = any(word in user_message for word in TRIGGER_WORDS)
+    is_business = any(word in user_message for word in TRIGGER_BUSINESS)
+
+    # Prompt dinámico
+    if is_medical:
+        system_prompt = """
+        Eres HEO, un asistente empático experto en bienestar.
+        Si detectas síntomas, clasifica como LEVE, MEDIO o GRAVE y responde:
+        [CONSEJO_NATURAL], [MEDICO_LINK], [URGENCIAS_LINK].
+        Sé breve, humano y muy claro.
+        """
+    elif is_business:
+        system_prompt = """
+        Eres HEO, un asistente estratégico que aplica el Método Códex Learning Loop™.
+        Objetivo: Genera ideas de negocio creativas y accionables.
+        Formato:
+        ✅ IDEA: breve y diferenciada
+        💡 ¿Por qué funciona?: razón lógica
+        🚀 Primeros pasos: 3 acciones claras
+        📊 Escalabilidad: cómo crecer rápido y barato
+        """
+    else:
+        system_prompt = "Eres HEO, asistente empático experto en bienestar general y creatividady ayuda comunitaria. Responde de forma clara, empática y útil."
+
+    # Payload para OpenRouter
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
+    }
+
     try:
-        data = request.get_json()
-        user_input = data.get('message', '')
+        # Llamada a la API OpenRouter
+        response = requests.post(OPENROUTER_URL, headers=HEADERS, json=payload)
+        response_data = response.json()
+        heo_reply = response_data["choices"][0]["message"]["content"]
 
-        if not user_input:
-            return jsonify({'error': 'Mensaje vacío'}), 400
+        # Reemplazar placeholders por botones
+        heo_reply = heo_reply.replace(
+            "[URGENCIAS_LINK]",
+            '<br><a href="https://maps.google.com?q=urgencias+cercanas" class="btn-urgencias" target="_blank">🚨 Ubicar Urgencias Cercanas</a>'
+        )
+        heo_reply = heo_reply.replace(
+            "[MEDICO_LINK]",
+            '<br><a href="https://medicos.generales.cl" class="btn-medico" target="_blank">👨‍⚕️ Consultar Médico General</a>'
+        )
+        heo_reply = heo_reply.replace(
+            "[CONSEJO_NATURAL]",
+            '<br><a href="#consejo" class="btn-leve">🌱 Ver Consejos Naturales</a>'
+        )
 
-        # Clasificación según intención
-        lower_input = user_input.lower()
-        if any(p in lower_input for p in TRIGGER_WORDS):
-            respuesta = respuestas["Bienestar"]
-        elif "contrato" in lower_input or "demanda" in lower_input or "juicio" in lower_input:
-            respuesta = respuestas["Legal"]
-        elif any(p in lower_input for p in TRIGGER_BUSINESS):
-            respuesta = respuestas["Negocio"]
-        elif "nombre creativo" in lower_input or "slogan" in lower_input or "marca" in lower_input:
-            respuesta = respuestas["Creativo"]
-        else:
-            # Si no detecta intención clara, se va al LLM
-            messages = [
-                {"role": "system", "content": "Eres HEO, un asistente de bienestar, creatividad y ayuda comunitaria. Responde de forma clara, empática y útil."},
-                {"role": "user", "content": user_input}
-            ]
-            completion = openai.ChatCompletion.create(
-                model=model,
-                messages=messages
-            )
-            respuesta = completion.choices[0].message['content']
+        # Guardar métrica en Google Sheets
+        tipo = "Negocio" if is_business else "Bienestar" if is_medical else "General"
+        sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), user_message, tipo, heo_reply])
 
-        # Log en Google Sheets
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sheet.append_row([now, user_input, respuesta])
-
-        return jsonify({'message': respuesta})
-
+        return jsonify({"reply": heo_reply})
     except Exception as e:
-        print(f"ERROR: {e}")
-        return jsonify({'error': 'Error al procesar la solicitud'}), 500
+        return jsonify({"error": str(e)}), 500
 
 # ================================
-# 7. RUN FLASK
+# 6. RUTAS PARA PWA
 # ================================
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/')
+def home():
+    return render_template("index.html")
+
+@app.route('/chat')
+def chat():
+    return render_template("chat.html")
+
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory('static', 'manifest.json')
+
+@app.route('/service-worker.js')
+def service_worker():
+    return send_from_directory('static', 'service-worker.js')
+
+# ================================
+# 7. INICIAR SERVIDOR
+# ================================
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
