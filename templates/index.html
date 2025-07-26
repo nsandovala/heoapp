@@ -71,6 +71,8 @@
       🚑 Urgencias Cercanas
     </button>
     <button id="sos-btn" class="w-full btn-glass py-3 text-lg font-semibold">🆘 Botón SOS</button>
+    <button id="installHEO" style="display:none;">📲 Instalar HEO</button>
+
   </div>
 
   <!-- FOOTER -->
@@ -170,5 +172,30 @@ function compartirUbicacion() {
   cerrarModalSOS();
 }
 </script>
+  <script>
+  let deferredPrompt;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // Ahora puedes mostrar un botón personalizado:
+    const installBtn = document.getElementById('installHEO');
+    installBtn.style.display = 'block';
+
+    installBtn.addEventListener('click', () => {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('HEO instalado');
+        } else {
+          console.log('Instalación cancelada');
+        }
+        deferredPrompt = null;
+      });
+    });
+  });
+</script>
+
 </body>
 </html>
