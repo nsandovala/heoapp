@@ -131,7 +131,7 @@ def api_chat():
         )
 
         # Guardar métrica en Google Sheets
-        tipo = "Negocio" if is_business else "Bienestar" if is_medical else "General"
+        tipo = "Bienestar" if is_medical else "Negocio" if is_business else "Legal" if is_legal else "Creativo" if is_creative else "General"
         sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), user_message, tipo, heo_reply])
 
         return jsonify({"reply": heo_reply})
